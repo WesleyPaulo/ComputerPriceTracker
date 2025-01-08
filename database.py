@@ -1,13 +1,13 @@
+
+
 import sqlite3
 
 
 class database:
-    con = ''
-    cursor = ''
     def __init__(self):
-        self.con = sqlite3.connect("database.db")
-        self.cursor = self.con.cursor()
-        self.cursor.execute("""CREATE TABLE IF NOT EXISTS products(
+        con = sqlite3.connect("database.db")
+        cursor = con.cursor()
+        cursor.execute("""CREATE TABLE IF NOT EXISTS products(
             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             product VARCHAR(255) NOT NULL,
             link VARCHAR(255) NOT NULL,
@@ -17,56 +17,62 @@ class database:
             installments VARCHAR(255),
             date VARCHAR(255) NOT NULL
             )""")
-        self.con.commit()
+        con.commit()
+        con.close()
     
     #CRUD
-    def add(self, product, link, ecommerce, cash_price, card_price, installments, date):
+    def add(self, product, link, ecommerce, cash_price, card_price, installments, date, connection):
         try:
+            cursor = connection.cursor()
             insert = (product, link, ecommerce, cash_price, card_price, installments, date)
-            self.cursor.execute("""INSERT INTO products(product, link, ecommerce, cashprice, cardprice, installments, date) 
+            cursor.execute("""INSERT INTO products(product, link, ecommerce, cashprice, cardprice, installments, date) 
                                 VALUES(?,?,?,?,?,?,?)""", insert)
         except Exception as e:
             print("Insertion error: ", e)
             
             
-    def read(self, id):
+    def read(self, id, connection):
         try:
-            result = self.cursor.execute('SELECT * FROM products WHERE id=?', id)
+            cursor = connection.cursor()
+            result = cursor.execute('SELECT * FROM products WHERE id=?', id)
             return result.fetchone()
             
         except Exception as e:
             print("Read error: ", e)
             
-    def update(self, id, product, link, ecommerce, cash_price, card_price, installments, date):
+    def update(self, id, product, link, ecommerce, cash_price, card_price, installments, date, connection):
         try:
+            cursor = connection.cursor()
             update = (product, link, ecommerce, product, link, ecommerce, cash_price, card_price, installments, date, id)
-            self.cursor.execute("""UPDATE products SET product=?, link=?, ecommerce=?, cashprice=?, cardprice=?, installments=?, date=?
+            cursor.execute("""UPDATE products SET product=?, link=?, ecommerce=?, cashprice=?, cardprice=?, installments=?, date=?
                                 WHERE id=?""", update)
         except Exception as e:
             print("Update error: ", e)
             
-    def  delete(self, id):
+    def  delete(self, id, connection):
         try:
-            self.cursor.execute('DELETE FROM products WHERE id=?',id)
+            cursor = connection.cursor()
+            cursor.execute('DELETE FROM products WHERE id=?',id)
         except Exception as e:
             print("delete error: ", e)
             
             
     #Help functions
-    def get_id_by_product(self, product):
+    def get_id_by_product(self, product, connection):
         try:
-            result = self.cursor.execute('SELECT id FROM products WHERE product=?', product)
+            cursor = connection.cursor()
+            result = cursor.execute('SELECT id FROM products WHERE product=?', product)
             return result.fetchone()
         except Exception as e:
             print("Get id error: ", e)
                 
-    def commit(self):
-        self.con.commit()
+    def commit(self, connection):
+        connection.commit()
             
     def get_connection(self):
-        return self.con
+        return sqlite3.connect("database.db")
             
-    def quit(self):
-        self.get_connection().close
+    def quit(self, connection):
+        connection.close()
             
 

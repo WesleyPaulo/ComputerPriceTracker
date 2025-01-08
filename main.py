@@ -13,8 +13,6 @@ def main():
     #Update the dataset with the today data
     updt = updater(driver_path, data_path, db)
     updt.update()
-    
-    db.quit()
 
 if __name__ == "__main__":
     main()
