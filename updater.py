@@ -6,9 +6,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import sys
 from datetime import date
-from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
 import random
+import re
 
 class updater:
     
@@ -47,16 +47,26 @@ class updater:
             
             #Get the name of the E-commerce
             ecommerce = request.split('.')[1].split('.')[0]
+            """if ecommerce == "terabyteshop":
+                return None
+            if ecommerce == "kabum":
+                return None"""
             
             #Initializes the driver
-            driver = webdriver.Chrome(service=Service(executable_path=self.driver_path))
+            options = webdriver.ChromeOptions()
+            #options.add_argument("--headless=new")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-gpu")
+            options.add_argument("start-maximized")
+            options.add_argument("disable-infobars")
+            driver = webdriver.Chrome(service=Service(executable_path=self.driver_path), options=options)
+            driver.set_window_position(-10000, 0)
             
 
             #Request, waits a random time(the scroll is for all the site can be loaded) 
-            driver.minimize_window()
+            #driver.minimize_window()
             driver.get(request)
             wait = WebDriverWait(driver, random.randint(10,20))
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
 
             #Get Contents of Terabyteshop
@@ -66,6 +76,16 @@ class updater:
                 try: 
                     product_title = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'tit-prod'))).get_attribute("textContent")
                 except:
+                    print("Error with product: can't find the product. Link: ", request)
+                    pass
+                
+                #If the Code can't be found the site has been changed or the URL is incorrect      
+                try:
+                    code = wait.until(EC.presence_of_element_located((By.ID, "partnumber"))).get_attribute("textContent")
+                    result = re.search(r'CÓD:\s*(.+)$', code)
+                    product_code = result.group(1)
+                except Exception as e:
+                    print("Error with product: can't find the product model. Link: " + request + " .Error: " + e )
                     pass
                 
                 #If don't have the cash price the product is unavailable
@@ -88,12 +108,15 @@ class updater:
                     product_card_installments = product_card_installments_a + " de " + product_card_installments_b + " " + product_card_installments_c
                 except:
                     product_card_installments = ""
+                
+                    
             
             if ecommerce == 'kabum':
                 #If the title can't be found the site has been changed or the URL is incorrect 
                 try: 
                     product_title = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '.sc-58b2114e-6.brTtKt'))).get_attribute("textContent")
                 except:
+                    print("Error with product: can't find the product. Link: ", request)
                     pass
                 
                 #If don't have the cash price the product is unavailable
@@ -113,6 +136,19 @@ class updater:
                     product_card_installments= wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'cardParcels'))).get_attribute("textContent")
                 except:
                     product_card_installments = ""
+                    
+                #If the Code can't be found the site has been changed or the URL is incorrect      
+                try:
+                    driver.execute_script("window.scrollTo(0, 1000);")
+                    #pattern = re.compile(r'- Modelo:\s*(.+?)\s*(Especificações|Recursos)', re.MULTILINE)
+                    code = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '.sc-7e0ca514-1.GiPKU'))).get_attribute("textContent")
+                    pattern = re.compile(r'- Modelo:\s*(?:.*?PartNumber:\s*)?(.+?)\s*(Especificações|Recursos|Especificação|- Não)', re.MULTILINE)
+                    result = pattern.search(code)
+                    product_code = result.group(1)
+                except Exception as e:
+                    print("Error with product: can't find the product model. Link: " + request + " .Error: " + e )
+                    pass
+           
 
             #closes the driver connection and the page
             driver.quit()
@@ -123,7 +159,7 @@ class updater:
             try:
                 connection = ''  
                 connection = self.db.get_connection()
-                self.db.add(product_title, request, ecommerce, product_cash_price, product_card_price, product_card_installments, date_today, connection)
+                self.db.add(product_title, product_code, request, ecommerce, product_cash_price, product_card_price, product_card_installments, date_today, connection)
                 self.db.commit(connection)
                 self.db.quit(connection)
             except Exception as e:
