@@ -1,0 +1,2 @@
+# Place here the links of the products that you will gather(links of Terabyte and Kabum E-Commerce)
+# Comment here like python(# single line)
